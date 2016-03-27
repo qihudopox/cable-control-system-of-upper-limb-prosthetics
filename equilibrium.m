@@ -30,6 +30,10 @@ equilibrium_fth = 1; %1:calculate equilibrium fth; 0: skip the step
 dynamic = 1;  %1:activate dynamic model; 0: skip the step
 friction = 1; %1: rotational friction depends on angular velocity
 %2: rotational friction is a constant
+shoulder_input = 2; %1: fast input, shoulder rotates and reaches target
+%in 0.6 seconds
+                    %2: shoulder reaches target in 2 seconds
+                    %3: shoulder reaches target in 10 seconds
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -38,9 +42,9 @@ friction = 1; %1: rotational friction depends on angular velocity
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % unit:cm
 ext = 7.5;
-thl = 8;
+thl = 5;
 ul = 18;
-ll = 13;
+ll = 12;
 a = 4;
 b = 4;
 p = 4; % p < thl
@@ -55,7 +59,7 @@ llangmin = 130;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % unit:kg
 mlh = 0.2;
-mlo = 0.01;
+mlo = 0.0443;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %unit:N
 firb = 1.7; % it is chosen such that force applied
@@ -79,12 +83,6 @@ elbow_frictional_moment = 0.3; %elbow friction induced anti torque
 step_for_angle = 1; % unit:degree
 step_for_time = 0.001; %unit:second
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%unit:s
-invtime = 3; %amount of time for upper arm to achieve target position
-dynamic_tracktime = 3;  %length of time to track the dynamic response of
-%lower arm
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 
 
 
@@ -122,6 +120,23 @@ p = p/100; % p < thl
 cg0 = cg0/100;
 k = k*100;
 kcbel = kcbel*100;
+
+%unit:s
+if shoulder_input ==1
+invtime = 2; %amount of time for upper arm to achieve target position
+dynamic_tracktime = 2;  %length of time to track the dynamic response of
+%forearmarm
+elseif shoulder_input ==2
+invtime = 4; %amount of time for upper arm to achieve target position
+dynamic_tracktime = 4;  %length of time to track the dynamic response of
+%forearmarm
+elseif shoulder_input ==3
+invtime = 20; %amount of time for upper arm to achieve target position
+dynamic_tracktime = 20;  %length of time to track the dynamic response of
+%forearmarm
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 
 
@@ -295,7 +310,7 @@ if dynamic == 1
     % numerical modeling of input shoulder flexion rotation
     % angular velocity and angular acceleration
     [omegaulm,alphaulm,thetaulm] =...
-        shoulder_flexion_rotation_model(step_for_time,invtime);
+     shoulder_flexion_rotation_model(step_for_time,invtime,shoulder_input);
     
     omegaf = 0;
     thetaf = llangmax;
