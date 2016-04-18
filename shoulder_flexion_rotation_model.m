@@ -3,15 +3,15 @@ function [v,a,angle] = shoulder_flexion_rotation_model(step_t,invtime,choice)
 if choice ==1
     var = 0.0163;
     mean = 0.0008;
-    gain = 55000;
+    gain = 42780;
 elseif choice ==2
     var = 0.22;
     mean = 0;
-    gain = 305;
+    gain = 237.6;
 elseif choice == 3
     var = 5;
     mean = 0;
-    gain = 0.6;
+    gain = 0.46;
 end
 
 t = 0:step_t:invtime;
@@ -41,4 +41,3 @@ ylabel('degree')
 
 
 end
-
