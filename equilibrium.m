@@ -25,15 +25,15 @@ clear all
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %system choice
 geometry = 1; %1:calculate geometry; 0: skip the step
-equilibrium_fel = 1; %1:calculate equilibrium fel; 0: skip the step
-equilibrium_fth = 1; %1:calculate equilibrium fth; 0: skip the step
+equilibrium_fel = 0; %1:calculate equilibrium fel; 0: skip the step
+equilibrium_fth = 0; %1:calculate equilibrium fth; 0: skip the step
 dynamic = 1;  %1:activate dynamic model; 0: skip the step
 friction = 1; %1: rotational friction depends on angular velocity
 %2: rotational friction is a constant
 shoulder_input = 2; %1: fast input, shoulder rotates and reaches target
 %in 0.6 seconds
-                    %2: shoulder reaches target in 2 seconds
-                    %3: shoulder reaches target in 10 seconds
+%2: shoulder reaches target in 2 seconds
+%3: shoulder reaches target in 10 seconds
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -42,24 +42,24 @@ shoulder_input = 2; %1: fast input, shoulder rotates and reaches target
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % unit:cm
 ext = 7.5;
-thl = 5;
+thl = 8;
 ul = 18;
-ll = 12;
-a = 4;
-b = 4;
+ll = 13;
+a = 7;
+b = 7;
 p = 4; % p < thl
 cg0 = 4;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % unit = degree
 thang = 10;
-ulang1 = 30;
-ulang2 = 45.5;
+ulang1 = 23;
+ulang2 = 31;
 llangmax = 170;
-llangmin = 130;
+llangmin = 120;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % unit:kg
-mlh = 0.2;
-mlo = 0.0443;
+mlh = 0.6;
+mlo = 0.0312;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %unit:N
 firb = 1.7; % it is chosen such that force applied
@@ -68,13 +68,10 @@ firb = 1.7; % it is chosen such that force applied
 % unit:N/cm
 k = 3;  % it is chosen such that force applied
 % to open hand is greater than force applied to lift arm
-kcbel = 150;    %cable elastic constant = E * cable_length
+kcbel = 53.65;    %cable elastic constant = E * cable_length
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%unit: kg*m^2
-ilh = 0.0042;
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%unit: N*s
-mfri = 0.3;   %angular friction coefficient, affected by rotational speed
+%unit: N*m*s/rad
+mfri = 0.4;   %angular friction coefficient, affected by rotational speed
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %unit: N*m
 elbow_frictional_moment = 0.3; %elbow friction induced anti torque
@@ -120,20 +117,23 @@ p = p/100; % p < thl
 cg0 = cg0/100;
 k = k*100;
 kcbel = kcbel*100;
+%unit: kg*m^2
+ilh = 1/2*mlh*1/2*cg0+1/2*mlh*1/2*(ll+thl-cg0);
+
 
 %unit:s
 if shoulder_input ==1
-invtime = 2; %amount of time for upper arm to achieve target position
-dynamic_tracktime = 2;  %length of time to track the dynamic response of
-%forearmarm
+    invtime = 2; %amount of time for upper arm to achieve target position
+    dynamic_tracktime = 2;  %length of time to track the dynamic response of
+    %forearmarm
 elseif shoulder_input ==2
-invtime = 4; %amount of time for upper arm to achieve target position
-dynamic_tracktime = 4;  %length of time to track the dynamic response of
-%forearmarm
+    invtime = 6; %amount of time for upper arm to achieve target position
+    dynamic_tracktime = 6;  %length of time to track the dynamic response of
+    %forearmarm
 elseif shoulder_input ==3
-invtime = 20; %amount of time for upper arm to achieve target position
-dynamic_tracktime = 20;  %length of time to track the dynamic response of
-%forearmarm
+    invtime = 20; %amount of time for upper arm to achieve target position
+    dynamic_tracktime = 20;  %length of time to track the dynamic response of
+    %forearmarm
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -310,7 +310,7 @@ if dynamic == 1
     % numerical modeling of input shoulder flexion rotation
     % angular velocity and angular acceleration
     [omegaulm,alphaulm,thetaulm] =...
-     shoulder_flexion_rotation_model(step_for_time,invtime,shoulder_input);
+        shoulder_flexion_rotation_model(step_for_time,invtime,shoulder_input);
     
     omegaf = 0;
     thetaf = llangmax;
@@ -330,8 +330,16 @@ if dynamic == 1
             sqrt(c^2+d^2-2*c*d*cos(thetaf(count7+1)))-abs(b-a)-...
             sqrt(c^2+d^2-2*c*d*cos(llangmax));
         
-        sirat = sin(thetaf(count7))/...
-            sqrt(c^2+d^2-2*c*d*cos(thetaf(count7)));
+        sirat = sin(thetaf(count7+1))/...
+            sqrt((c+b)^2+d^2-2*(c+b)*d*cos(thetaf(count7+1)));
+        
+%         sirat = sin(thetaf(count7+1))/...
+%             sqrt(c^2+d^2-2*c*d*cos(thetaf(count7+1)));
+
+        sirat1 = sin(thetaf(count7+1))/...
+            sqrt(cg^2+(b+c)^2-2*cg*(b+c)*cos(thetaf(count7+1)));
+        sirat2 = sin(thetaf(count7+1))/...
+            sqrt(d^2+c^2-2*c*d*cos(thetaf(count7+1)));
         
         if friction ==1
             fri = mfri*(omegaf(count7)-omegaul);
@@ -345,12 +353,30 @@ if dynamic == 1
         end
         
         
-        fulel =(kcbel*extcbel(count7)*c*(d-cg)*sin(thetaf(count7+1))/...
+        
+        
+%         fulel =(kcbel*extcbel(count7)*(d-cg)*(c*sin(thetaf(count7+1))/...
+%             sqrt(c^2+d^2-2*c*d*cos(thetaf(count7+1)))+...
+%             e*sin(pi-thang)/sqrt(e^2+f*2-2*e*f*cos(pi-thang)))-fri-...
+%             (ilh +mlh*(cg-cg0)^2+mlo*(ll+thl-cg)^2)*alphaf)/...
+%             (sin(pi-thetaf(count7+1))*cg);
+
+        fulel =(kcbel*extcbel(count7)*(d-cg)*c*sin(thetaf(count7+1))/...
             sqrt(c^2+d^2-2*c*d*cos(thetaf(count7+1)))-fri-...
             (ilh +mlh*(cg-cg0)^2+mlo*(ll+thl-cg)^2)*alphaf)/...
             (sin(pi-thetaf(count7+1))*cg);
         
         
+%         [salphaf] = solve((mlh+mlo)*(omegaul^2*(b+c)*d*sirat+...
+%             alphaul*(b+c)*cos(asin(d*sirat))-...
+%             omegaf(count7)^2*cg*(b+c)*sirat+...
+%             alphaf*cg*cos(asin((b+c)*sirat)))==fulel*d*sirat-...
+%             kcbel*extcbel(count7)*(b*d*sirat/...
+%             sqrt(c^2+d^2-2*c*d*cos(thetaf(count7+1)))-...
+%             sin(asin((b+c)*sirat)+...
+%             asin(f*sin(pi-thang)/sqrt(f^2+e^2-2*f*e*cos(pi-thang)))))-...
+%             (wlh+wlo)*sin(thetaul+asin(d*sirat)),alphaf);
+
         [salphaf] = solve((mlh+mlo)*(omegaul^2*(b+c)*d*sirat+...
             alphaul*(b+c)*cos(asin(d*sirat))-...
             omegaf(count7)^2*cg*(b+c)*sirat+...
@@ -358,17 +384,53 @@ if dynamic == 1
             kcbel*extcbel(count7)*b*d*sirat/...
             sqrt(c^2+d^2-2*c*d*cos(thetaf(count7+1)))-...
             (wlh+wlo)*sin(thetaul+asin(d*sirat)),alphaf);
+
+        
         salphaf = double(salphaf);
         
-        if thetaf(count7+1)>llangmax
+        if thetaf(count7+1)>=llangmax
             thetaf(count7+1) = llangmax;
             ssalphaf(count7)= alphaul;
             omegaf(count7+1) = omegaul;
+            
+%             ssfulel(count7) = ((mlh+mlo)*alphaul*...
+%                 sqrt(cg^2+(b+c)^2-2*cg*(b+c)*cos(thetaf(count7+1)))+...
+%                 kcbel*extcbel(count7)*(sin(asin(d*sirat2)-asin(cg*sirat1))+...
+%                 sin(asin((b+c)*sin(thetaf(count7+1)/sqrt((b+c)^2+...
+%                 cg^2-2*cg*(b+c)*cos(thetaf(count7+1)))))+...
+%                 asin(f*sin(pi-thang)/sqrt(f^2+e^2-2*e*f*cos(pi-thang)))))+...
+%                 (wlh+wlo)*sin(thetaul+asin(cg*sirat1)))/(cg*sirat1);
+            
+              ssfulel(count7) = ((mlh+mlo)*alphaul*...
+                sqrt(cg^2+(b+c)^2-2*cg*(b+c)*cos(thetaf(count7+1)))+...
+                kcbel*extcbel(count7)*sin(asin(d*sirat2)-asin(cg*sirat1))+...
+                (wlh+wlo)*sin(thetaul+asin(cg*sirat1)))/(cg*sirat1);
+
+
+%                         supporting_moment = (wlh+wlo)*cg*...
+%                             sin(thetaul+(pi-thetaf(count7+1)))-extcbel(count7)*kcbel*...
+%                             d*(b+c)*sirat;
         else
             ssalphaf(count7) = salphaf;
             omegaf(count7+1) = omegaf(count7) + ssalphaf(count7)*...
                 step_for_time;
+            
+%             ssfulel(count7) =(kcbel*extcbel(count7)*(d-cg)*(c*sin(thetaf(count7+1))/...
+%             sqrt(c^2+d^2-2*c*d*cos(thetaf(count7+1)))+...
+%             e*sin(pi-thang)/sqrt(e^2+f*2-2*e*f*cos(pi-thang)))-fri-...
+%             (ilh +mlh*(cg-cg0)^2+mlo*(ll+thl-cg)^2)*salphaf)/...
+%             (sin(pi-thetaf(count7+1))*cg);
+
+            ssfulel(count7) =(kcbel*extcbel(count7)*(d-cg)*c*sin(thetaf(count7+1))/...
+            sqrt(c^2+d^2-2*c*d*cos(thetaf(count7+1)))-fri-...
+            (ilh +mlh*(cg-cg0)^2+mlo*(ll+thl-cg)^2)*salphaf)/...
+            (sin(pi-thetaf(count7+1))*cg);
+
+        
+            %             supporting_moment = 0;
         end
+        
+        
         
         %         ssfulel(count7) = ((mlh+mlo)*(omegaul^2*(b+c)*d*sirat+...
         %             alphaul*(b+c)*cos(asin(d*sirat))-...
@@ -378,10 +440,7 @@ if dynamic == 1
         %             sqrt(c^2+d^2-2*c*d*cos(thetaf(count7+1)))+...
         %             (wlh+wlo)*sin(thetaul+asin(d*sirat)))/d*sirat;
         
-        ssfulel(count7) =(kcbel*extcbel(count7)*c*(d-cg)*sin(thetaf(count7+1))/...
-            sqrt(c^2+d^2-2*c*d*cos(thetaf(count7+1)))-fri-...
-            (ilh +mlh*(cg-cg0)^2+mlo*(ll+thl-cg)^2)*ssalphaf(count7))/...
-            (sin(pi-thetaf(count7+1))*cg);
+        
         
         
         
@@ -401,8 +460,17 @@ if dynamic == 1
             sqrt(c^2+d^2-2*c*d*cos(thetaf(count8+1)))-abs(b-a)-...
             sqrt(c^2+d^2-2*c*d*cos(llangmax));
         
-        sirat = sin(thetaf(count8))/...
-            sqrt(c^2+d^2-2*c*d*cos(thetaf(count8)));
+        sirat = sin(thetaf(count8+1))/...
+            sqrt((c+b)^2+d^2-2*(c+b)*d*cos(thetaf(count8+1)));
+
+%         sirat = sin(thetaf(count8+1))/...
+%             sqrt(c^2+d^2-2*c*d*cos(thetaf(count8+1)));
+
+        
+        sirat1 = sin(thetaf(count8+1))/...
+            sqrt(cg^2+(b+c)^2-2*cg*(b+c)*cos(thetaf(count8+1)));
+        sirat2 = sin(thetaf(count8+1))/...
+            sqrt(d^2+c^2-2*c*d*cos(thetaf(count8+1)));
         
         if friction ==1
             fri = mfri*(omegaf(count8)-omegaul);
@@ -416,30 +484,81 @@ if dynamic == 1
         end
         
         
-        fulel =(kcbel*extcbel(count8)*c*(d-cg)*sin(thetaf(count8+1))/...
+%         fulel =(kcbel*extcbel(count8)*(d-cg)*(c*sin(thetaf(count8+1))/...
+%             sqrt(c^2+d^2-2*c*d*cos(thetaf(count8+1)))+...
+%             e*sin(pi-thang)/sqrt(e^2+f*2-2*e*f*cos(pi-thang)))-fri-...
+%             (ilh +mlh*(cg-cg0)^2+mlo*(ll+thl-cg)^2)*alphaf)/...
+%             (sin(pi-thetaf(count8+1))*cg);
+
+        fulel =(kcbel*extcbel(count8)*(d-cg)*c*sin(thetaf(count8+1))/...
             sqrt(c^2+d^2-2*c*d*cos(thetaf(count8+1)))-fri-...
             (ilh +mlh*(cg-cg0)^2+mlo*(ll+thl-cg)^2)*alphaf)/...
             (sin(pi-thetaf(count8+1))*cg);
+
         
-        
+%         [salphaf] = solve((mlh+mlo)*(omegaul^2*(b+c)*d*sirat+...
+%             alphaul*(b+c)*cos(asin(d*sirat))-...
+%             omegaf(count8)^2*cg*(b+c)*sirat+...
+%             alphaf*cg*cos(asin((b+c)*sirat)))==fulel*d*sirat-...
+%             kcbel*extcbel(count8)*(b*d*sirat/...
+%             sqrt(c^2+d^2-2*c*d*cos(thetaf(count8+1)))-...
+%             sin(asin((b+c)*sirat)+...
+%             asin(f*sin(pi-thang)/sqrt(f^2+e^2-2*f*e*cos(pi-thang)))))-...
+%             (wlh+wlo)*sin(thetaul+asin(d*sirat)),alphaf);
+
         [salphaf] = solve((mlh+mlo)*(omegaul^2*(b+c)*d*sirat+...
             alphaul*(b+c)*cos(asin(d*sirat))-...
             omegaf(count8)^2*cg*(b+c)*sirat+...
             alphaf*cg*cos(asin((b+c)*sirat)))==fulel*d*sirat-...
             kcbel*extcbel(count8)*b*d*sirat/...
-            sqrt(c^2+d^2-2*c*d*cos(thetaf(count8+1)))-...
+            sqrt(c^2+d^2-2*c*d*cos(thetaf(count8+1)))\-...
             (wlh+wlo)*sin(thetaul+asin(d*sirat)),alphaf);
+
+        
         salphaf = double(salphaf);
         
-        if thetaf(count8+1)>llangmax
+        if thetaf(count8+1)>=llangmax
             thetaf(count8+1) = llangmax;
             ssalphaf(count8)= alphaul;
             omegaf(count8+1) = omegaul;
+%             ssfulel(count8) = ((mlh+mlo)*alphaul*...
+%                 sqrt(cg^2+(b+c)^2-2*cg*(b+c)*cos(thetaf(count8+1)))+...
+%                 kcbel*extcbel(count8)*(sin(asin(d*sirat2)-asin(cg*sirat1))+...
+%                 sin(asin((b+c)*sin(thetaf(count8+1)/sqrt((b+c)^2+...
+%                 cg^2-2*cg*(b+c)*cos(thetaf(count8+1)))))+...
+%                 asin(f*sin(pi-thang)/sqrt(f^2+e^2-2*e*f*cos(pi-thang)))))+...
+%                 (wlh+wlo)*sin(thetaul+asin(cg*sirat1)))/(cg*sirat1);
+
+            ssfulel(count8) = ((mlh+mlo)*alphaul*...
+                sqrt(cg^2+(b+c)^2-2*cg*(b+c)*cos(thetaf(count8+1)))+...
+                kcbel*extcbel(count8)*sin(asin(d*sirat2)-asin(cg*sirat1))+...
+                (wlh+wlo)*sin(thetaul+asin(cg*sirat1)))/(cg*sirat1);
+
+            
+            %             supporting_moment = (wlh+wlo)*cg*...
+            %                 sin(thetaul+(pi-thetaf(count7+1)))-extcbel(count7)*kcbel*...
+            %                 d*(b+c)*sirat;
         else
             ssalphaf(count8) = salphaf;
             omegaf(count8+1) = omegaf(count8) + ssalphaf(count8)*...
                 step_for_time;
+%             ssfulel(count8) =(kcbel*extcbel(count8)*(d-cg)*(c*sin(thetaf(count8+1))/...
+%             sqrt(c^2+d^2-2*c*d*cos(thetaf(count8+1)))+...
+%             e*sin(pi-thang)/sqrt(e^2+f*2-2*e*f*cos(pi-thang)))-fri-...
+%             (ilh +mlh*(cg-cg0)^2+mlo*(ll+thl-cg)^2)*salphaf)/...
+%             (sin(pi-thetaf(count8+1))*cg);
+
+            ssfulel(count8) =(kcbel*extcbel(count8)*(d-cg)*c*sin(thetaf(count8+1))/...
+            sqrt(c^2+d^2-2*c*d*cos(thetaf(count8+1)))-fri-...
+            (ilh +mlh*(cg-cg0)^2+mlo*(ll+thl-cg)^2)*salphaf)/...
+            (sin(pi-thetaf(count8+1))*cg);
+
+        
+        %             supporting_moment = 0;
         end
+        
+        
+        
         
         %         ssfulel(count8) = ((mlh+mlo)*(omegaul^2*(b+c)*d*sirat+...
         %             alphaul*(b+c)*cos(asin(d*sirat))-...
@@ -449,10 +568,7 @@ if dynamic == 1
         %             sqrt(c^2+d^2-2*c*d*cos(thetaf(count8+1)))+...
         %             (wlh+wlo)*sin(thetaul+asin(d*sirat)))/d*sirat;
         
-        ssfulel(count8) =(kcbel*extcbel(count8)*c*(d-cg)*sin(thetaf(count8+1))/...
-            sqrt(c^2+d^2-2*c*d*cos(thetaf(count8+1)))-fri-...
-            (ilh +mlh*(cg-cg0)^2+mlo*(ll+thl-cg)^2)*ssalphaf(count8))/...
-            (sin(pi-thetaf(count8+1))*cg);
+        
         
         omegaulm(count8+1)=0;
         thetaulm(count8+1)=thetaulm(count8);
@@ -461,6 +577,53 @@ if dynamic == 1
     end
     
     
+    
+    t = 0:step_for_time:dynamic_tracktime;
+    omegaf = omegaf.*180./pi;
+    ssalphaf = ssalphaf.*180./pi;
+    thetaf = thetaf.*180./pi;
+    cg0 = cg0*100
+    
+    figure
+    subplot(3,1,1);
+    plot(t,omegaf(1:(length(omegaf)-1)),'r');
+    hold on
+    plot(t,omegaulm(1:(length(omegaf)-1)),'c');
+    if friction ==1
+        titlstr = sprintf('cable constant = %g N/m   rotational friction coefficient = %g N*s d = %g cm \n mlh = %g kg cg0 = %g cm mlo = %g kg\n flexion angular velocity',kcbel,mfri,d,mlh,cg0,mlo);
+    elseif friction ==2
+        titlstr = sprintf('cable constant = %g N/m   rotational friction = %g N*m d = %g cm \n mlh = %g kg cg0 = %g cm mlo = %g kg\n flexion angular velocity',kcbel,elbow_frictional_moment,d,mlh,cg0,mlo);
+    end
+    title(titlstr);
+    ylabel('degree/s');
+    subplot(3,1,2);
+    plot(t,ssalphaf,'b');
+    hold on
+    plot(t,alphaulm(1:(length(omegaf)-1)),'c');
+    ylabel('degree/s^2');
+    title('flexion angular acceleration');
+    subplot(3,1,3);
+    plot(t,thetaf(2:length(thetaf)),'g');
+    hold on
+    plot(t,thetaulm(1:(length(omegaf)-1)),'c');
+    title('flexion angle');
+    ylabel('degree');
+    xlabel('time: s');
+    
+    figure
+    plot(t,extcbel.*kcbel);
+    title('cable tensile force');
+    ylabel('N');
+    xlabel('time: s');
+    
+    figure
+    plot(t,ssfulel);
+    title('elbow force');
+    ylabel('N');
+    xlabel('time: s')
+    
+    
+end
     
     t = 0:step_for_time:dynamic_tracktime;
     omegaf = omegaf.*180./pi;
