@@ -25,12 +25,12 @@ clear all
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %system choice
 geometry = 1; %1:calculate geometry; 0: skip the step
-equilibrium_fel = 0; %1:calculate equilibrium fel; 0: skip the step
-equilibrium_fth = 0; %1:calculate equilibrium fth; 0: skip the step
-dynamic = 1;  %1:activate dynamic model; 0: skip the step
+equilibrium_fel = 1; %1:calculate equilibrium fel; 0: skip the step
+equilibrium_fth = 1; %1:calculate equilibrium fth; 0: skip the step
+dynamic = 0;  %1:activate dynamic model; 0: skip the step
 friction = 1; %1: rotational friction depends on angular velocity
 %2: rotational friction is a constant
-shoulder_input = 2; %1: fast input, shoulder rotates and reaches target
+shoulder_input = 1; %1: fast input, shoulder rotates and reaches target
 %in 0.6 seconds
 %2: shoulder reaches target in 2 seconds
 %3: shoulder reaches target in 10 seconds
@@ -58,15 +58,15 @@ llangmax = 170;
 llangmin = 120;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % unit:kg
-mlh = 0.6;
-mlo = 0.0312;
+mlh = 0.5;
+mlo = 0;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %unit:N
 firb = 1.7; % it is chosen such that force applied
 % to open hand is greater than force applied to lift arm
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % unit:N/cm
-k = 3;  % it is chosen such that force applied
+k = 10;  % it is chosen such that force applied
 % to open hand is greater than force applied to lift arm
 kcbel = 53.65;    %cable elastic constant = E * cable_length
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -77,7 +77,7 @@ mfri = 0.4;   %angular friction coefficient, affected by rotational speed
 elbow_frictional_moment = 0.3; %elbow friction induced anti torque
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % step
-step_for_angle = 1; % unit:degree
+step_for_angle = 0.01; % unit:degree
 step_for_time = 0.001; %unit:second
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -239,12 +239,12 @@ if (equilibrium_fel == 1)
     max_force_with_beta = solbeta(cn1)/pi*180;
     
     figure
-    plot(gamma/pi*180,solfel,'b');
+    plot(gamma/pi*180,solfel,'c--o');
     title('static cable tensile force to lift forearm');
     xlabel('upper arm rotation : degree');
     ylabel('static cable tensile force : N');
     hold on
-    plot(max_force_with_gamma,maxfel,'r+');
+    plot(max_force_with_gamma,maxfel,'r*');
     
     
     display(max_force_with_gamma);
@@ -269,6 +269,7 @@ if (equilibrium_fth == 1)
         fth(count5) = (firb+k*extrb)*f*sin(phi)/...
             (sin(mpsi)*e);
         frb(count5) = firb+k*extrb;
+%         fgt(count5) = (extrb*k+firb)*
     end
     maxfth = fth(1);
     for count6 = 1:maxthetacount
@@ -281,14 +282,14 @@ if (equilibrium_fth == 1)
     max_force_with_mtheta = ((cn2-1)*step_for_angle+thang)/pi*180;
     
     figure
-    plot(mtheta/pi*180,fth,'b');
+    plot(mtheta/pi*180,fth,'c--o');
     hold on
-    plot(mtheta/pi*180,frb,'r')
+    plot(mtheta/pi*180,frb,'m--o')
     title('static cable tensile force to open hand');
     xlabel('thumb rotation : degree');
     ylabel('force : N');
     hold on
-    plot(max_force_with_mtheta,maxfth,'r+');
+    plot(max_force_with_mtheta,maxfth,'r*');
     
     display(maxfth);
     display(max_force_with_mtheta);
@@ -586,9 +587,9 @@ if dynamic == 1
     
     figure
     subplot(3,1,1);
-    plot(t,omegaf(1:(length(omegaf)-1)),'r');
+    plot(t,omegaf(1:(length(omegaf)-1)),'ro');
     hold on
-    plot(t,omegaulm(1:(length(omegaf)-1)),'c');
+    plot(t,omegaulm(1:(length(omegaf)-1)),'co');
     if friction ==1
         titlstr = sprintf('cable constant = %g N/m   rotational friction coefficient = %g N*s d = %g cm \n mlh = %g kg cg0 = %g cm mlo = %g kg\n flexion angular velocity',kcbel,mfri,d,mlh,cg0,mlo);
     elseif friction ==2
@@ -597,73 +598,35 @@ if dynamic == 1
     title(titlstr);
     ylabel('degree/s');
     subplot(3,1,2);
-    plot(t,ssalphaf,'b');
+    plot(t,ssalphaf,'bo');
     hold on
-    plot(t,alphaulm(1:(length(omegaf)-1)),'c');
+    plot(t,alphaulm(1:(length(omegaf)-1)),'co');
     ylabel('degree/s^2');
     title('flexion angular acceleration');
     subplot(3,1,3);
-    plot(t,thetaf(2:length(thetaf)),'g');
+    plot(t,thetaf(2:length(thetaf)),'go');
     hold on
-    plot(t,thetaulm(1:(length(omegaf)-1)),'c');
+    plot(t,thetaulm(1:(length(omegaf)-1)),'co');
     title('flexion angle');
     ylabel('degree');
     xlabel('time: s');
     
-    figure
-    plot(t,extcbel.*kcbel);
-    title('cable tensile force');
-    ylabel('N');
-    xlabel('time: s');
-    
-    figure
-    plot(t,ssfulel);
-    title('elbow force');
-    ylabel('N');
-    xlabel('time: s')
-    
-    
-end
-    
-    t = 0:step_for_time:dynamic_tracktime;
-    omegaf = omegaf.*180./pi;
-    ssalphaf = ssalphaf.*180./pi;
-    thetaf = thetaf.*180./pi;
-    
-    figure
-    subplot(3,1,1);
-    plot(t,omegaf(1:(length(omegaf)-1)),'r');
-    hold on
-    plot(t,omegaulm(1:(length(omegaf)-1)),'c');
-    if friction ==1
-        titlstr = sprintf('cable constant = %g N/m   rotational friction coefficient = %g N*s d = %g cm \n flexion angular velocity',kcbel,mfri,d);
-    elseif friction ==2
-        titlstr = sprintf('cable constant = %g N/m   rotational friction = %g N*m d = %g cm \n flexion angular velocity',kcbel,elbow_frictional_moment,d);
+    for count9 = 1:length(extcbel)
+    if extcbel(count9)<0
+        extcbel(count9) = 0;
     end
-    title(titlstr);
-    ylabel('degree/s');
-    subplot(3,1,2);
-    plot(t,ssalphaf,'b');
-    hold on
-    plot(t,alphaulm(1:(length(omegaf)-1)),'c');
-    ylabel('degree/s^2');
-    title('flexion angular acceleration');
-    subplot(3,1,3);
-    plot(t,thetaf(2:length(thetaf)),'g');
-    hold on
-    plot(t,thetaulm(1:(length(omegaf)-1)),'c');
-    title('flexion angle');
-    ylabel('degree');
-    xlabel('time: s');
+    end
+    
+    cable_force = extcbel.*kcbel;
     
     figure
-    plot(t,extcbel.*kcbel);
+    plot(t,cable_force,'bo');
     title('cable tensile force');
     ylabel('N');
     xlabel('time: s');
     
     figure
-    plot(t,ssfulel);
+    plot(t,ssfulel,'g');
     title('elbow force');
     ylabel('N');
     xlabel('time: s')
