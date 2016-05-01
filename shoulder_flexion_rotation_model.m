@@ -26,15 +26,15 @@ end
 
 figure
 subplot(3,1,1);
-plot(t,v,'r');
+plot(t,v,'ro');
 title('flexion angular velocity')
 ylabel('degree/s')
 subplot(3,1,2);
-plot(t,a,'b');
+plot(t,a,'bo');
 title('flexion angular acceleration')
 ylabel('degree/s^2')
 subplot(3,1,3);
-plot(t,angle,'g');
+plot(t,angle,'go');
 title('flexion angle')
 xlabel('time:s')
 ylabel('degree')
